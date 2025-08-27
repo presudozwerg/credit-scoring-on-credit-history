@@ -23,7 +23,8 @@ def save_model(model: CreditRNNModel,
     trans_table = str.maketrans({'-': '', ':': ''})
     date = date.translate(trans_table)
     file_name = f'{date}_{type}_model_checkpoint.pt'
-    torch.save(model, CHECKPOINTS_PATH / file_name)
+    with open(CHECKPOINTS_PATH / file_name, 'w') as handle:
+        torch.save(model, CHECKPOINTS_PATH / file_name)
 
 
 def train_model(model: CreditRNNModel,
@@ -64,7 +65,7 @@ def train_model(model: CreditRNNModel,
             loss = loss_criterion(probs, targets)
             loss.backward()
             opt.step()
-            epoch_losses.append(loss)
+            epoch_losses.append(loss.item())
         sched.step()
         epoch_loss = np.array(epoch_losses).mean()
         loss_list.append(epoch_loss)
@@ -97,7 +98,7 @@ def evaluate(model: CreditRNNModel,
             y_batch = batch[1].to('cpu')
             probs = model(X_batch).squeeze().to('cpu') # [batch_size]
             loss = criterion(y_batch, probs)
-            roc_auc.append(loss.item())
+            roc_auc.append(loss)
 
     roc_auc = np.mean(np.array(roc_auc))
     return roc_auc
@@ -106,8 +107,6 @@ def main(data_root: Path | str = DATA_ROOT,
          train_folder: str = TRAIN_FILES_FOLDER,
          train_target: str = TRAIN_TARGET_FILE,
          test_folder: str = TEST_FILES_FOLDER,
-         test_target: str = TEST_TARGET_FILE,
-         file_submission: str = FILE_SUBMISSION,
          n_epochs: int = N_EPOCHS,
          agg_type: str = AGG_TYPE,
          rnn_type: str = RNN_TYPE):
@@ -116,15 +115,13 @@ def main(data_root: Path | str = DATA_ROOT,
         data_root,
         train_folder,
         train_target,
-        test_folder,
-        test_target,
-        file_submission
+        test_folder
     )
     preproc = Preprocesser(paths_dict)
 
     all_features = preproc.combine_train_test_features('train')
     n_features = all_features[min(all_features.keys())].shape[1]
-    tr_target = preproc.read_train_test_target('train_target')
+    tr_target = preproc.read_train_target()
 
     tr_features, val_features, tr_target, val_target = train_test_split(
         list(all_features.values()),
@@ -156,7 +153,7 @@ def main(data_root: Path | str = DATA_ROOT,
                            rnn_type=rnn_type)
     criterion = nn.BCELoss()
     optimizer = Adam(model.parameters())
-    scheduler = StepLR(optimizer, step_size=1, gamma=0.7)
+    scheduler = StepLR(optimizer, step_size=5, gamma=0.7)
     
     best_checkpoint, history = train_model(
         model, 

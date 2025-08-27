@@ -7,7 +7,7 @@ TECH_COLS = ['rn']
 
 # Data paths for prod
 ROOT = Path(__file__).resolve().parents[1]
-DATA_FOLDER = 'data_debug'
+DATA_FOLDER = 'data_balanced'
 DATA_ROOT = ROOT / DATA_FOLDER
 # DATA_ROOT = Path('/home/przwerg99/Документы/MIPT/sem2/MLOps/credit-scoring-on-credit-history/data_raw')
 
@@ -15,13 +15,9 @@ TRAIN_FILES_FOLDER = 'train_data'
 TRAIN_TARGET_FILE = 'train_target.csv'
 
 TEST_FILES_FOLDER = 'test_data'
-TEST_TARGET_FILE = 'test_target.csv'
-
-FILE_SUBMISSION = 'sample_submission.csv'
 
 # Preprocessing
 ROWS_THRESHOLD = 15
-LIMITER_STEP = 50
 VAL_SIZE = 0.2
 BATCH_SIZE = 128
 

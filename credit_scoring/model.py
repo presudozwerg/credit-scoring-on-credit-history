@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 import torch.nn as nn
 from constants import *
@@ -14,10 +15,7 @@ class CreditRNNModel(nn.Module):
                  is_bidir: bool = IS_BIDIR,
                  dropout_prob: float = DROPOUT_P):
         super().__init__()
-        maximum_train_value = seq_len * LIMITER_STEP # maximum number in train data
-        rnn_input_size = seq_len * emb_dim
-
-        self.emb = nn.Embedding(maximum_train_value, emb_dim)
+        rnn_input_size = seq_len
 
         model_params_dict = {
             'input_size': rnn_input_size,
@@ -58,26 +56,27 @@ class CreditRNNModel(nn.Module):
             torch.Tensor: Output of the model (predicted probs)
         """
         
-        input_batch = input_batch.to(torch.int32)
-        # print(input_batch.shape)
+        input_batch = input_batch.to(torch.float32)
         
-        embeddings = self.emb(input_batch) # [batch_size, n_seq, hidden_dim]
-        # print(embeddings.shape)
-        embeddings = torch.flatten(embeddings, start_dim=2, end_dim=3)
-        # print(embeddings.shape)
-        output, _ = self.rnn(embeddings) # [batch_size, n_seq, hidden_dim]
-        # print(output.shape)
+        
+        output, _ = self.rnn(input_batch) # [batch_size, n_seq, hidden_dim]
+        
         if self.aggregation_type == 'max':
             output = output.max(dim=1)[0] # [batch_size, hidden_dim]
         elif self.aggregation_type == 'mean':
             output = output.mean(dim=1) # [batch_size, hidden_dim]
         elif self.aggregation_type == 'last':
-            output = output[:,-1,:]
+            output = output[:, -1, :]
         else:
             raise ValueError('Invalid aggregation_type')
-        # print(output.shape)
+        
         output = self.dropout(self.linear(self.non_lin(output))) # [batch_size, hidden_dim]
-        # print(output.shape)
+        
         projection = self.projection(self.non_lin(output)) # [batch_size, 1]
-        # print(projection.shape)
+        
         return torch.sigmoid(projection)
+    
+if __name__ == '__main__':
+    inp = torch.tensor(np.zeros((128, 10, 59))).to(torch.float32)
+    m = CreditRNNModel(59)
+    print(m(inp).shape)

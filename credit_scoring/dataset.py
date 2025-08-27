@@ -1,12 +1,12 @@
 import torch
 import pandas as pd
 
-from typing import Dict
+from typing import List
 
 class CreditDataset:
     def __init__(self, 
-                 data: Dict, 
-                 flags: pd.DataFrame = None,
+                 data: List, 
+                 flags: List = None,
                  category: str ='train'):
         self.data = data
         self.flags = flags

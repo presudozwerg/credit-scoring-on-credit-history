@@ -16,9 +16,7 @@ class PathsDict():
              data_root_path: Path = DATA_ROOT,
              train_files_folder: str = TRAIN_FILES_FOLDER,
              train_target_file: str = TRAIN_TARGET_FILE,
-             test_files_folder: str = TEST_FILES_FOLDER,
-             test_target_file: str = TEST_TARGET_FILE,
-             submission_file: str = FILE_SUBMISSION):
+             test_files_folder: str = TEST_FILES_FOLDER) -> Dict:
         train_folder = data_root_path / train_files_folder
         train_files_list = list(train_folder.glob('**/*.pq'))
         self.paths['train'] = sorted(train_files_list)
@@ -28,9 +26,6 @@ class PathsDict():
         self.paths['test'] = sorted(test_files_list)
 
         self.paths['train_target'] = Path(data_root_path / train_target_file)
-        self.paths['test_target'] = Path(data_root_path / test_target_file)
-
-        self.paths['submission_file'] = Path(data_root_path / submission_file)
         return self.paths
     
 class Preprocesser():
@@ -100,12 +95,10 @@ class Preprocesser():
         data_dict = {}
         table_width = len(feature_columns)
         table = raw_table.groupby(ID_COLUMN_NAME)
-        max_limiter_num = LIMITER_STEP * table_width
-        limiter = np.arange(1, max_limiter_num, LIMITER_STEP)
 
         for i, frame in table:
             add_rows = np.zeros((max(rn_threshold - frame.shape[0], 0), table_width))
-            processed_rows = frame[feature_columns].values + limiter
+            processed_rows = frame[feature_columns].values
             if frame.shape[0] > rn_threshold:
                 processed_rows = processed_rows[:rn_threshold]
             data_dict[i] = np.vstack((add_rows, processed_rows)).astype('int16')
@@ -138,27 +131,22 @@ class Preprocesser():
             raise ValueError('Wrong label!')
         return data
     
-    def read_train_test_target(self,
-                               label: str) -> pd.DataFrame:
-        """Reading files with target
-
-        Args:
-            label (str): Type of data ('train_target' or 'test_target')
+    def read_train_target(self) -> pd.DataFrame:
+        """Reading files with train target
 
         Raises:
-            ValueError: Raises if `label` value is wrong
+            ValueError: Raises if path in cofigs doesn't belong to csv file
 
         Returns:
             pd.DataFrame: Contains target values
         """
-        df_path = self.paths_dict[label]
+        df_path = self.paths_dict['train_target']
         if df_path.suffix != '.csv':
             raise ValueError('Path should belong to .csv file!')
         
-        if label in ('train_target', 'test_target'):
-            table = pd.read_csv(df_path)
-            if table.columns[0] == 'Unnamed: 0':
-                table.drop(columns=['Unnamed: 0'], inplace=True)
+        table = pd.read_csv(df_path)
+        if table.columns[0] == 'Unnamed: 0':
+            table.drop(columns=['Unnamed: 0'], inplace=True)
         return table
 
 def main():
@@ -181,12 +169,6 @@ def main():
         id = int(input())
         frame = preproc.combine_train_test_features(typ)[id]
         print(frame[:5])
-        print(frame.shape)
-
-        print('Type label of the data [train_target/test_target]')
-        typ = input()
-        frame = preproc.read_train_test_target(typ)
-        print(frame.head(10))
         print(frame.shape)
     return 0
 
