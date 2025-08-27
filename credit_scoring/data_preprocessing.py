@@ -32,6 +32,7 @@ class Preprocesser():
     def __init__(self,
                  paths_dict: dict):
         self.paths_dict = paths_dict
+        self.feature_cols = None
 
     @staticmethod
     def read_table(path: Path) -> Tuple[pd.DataFrame, str]:

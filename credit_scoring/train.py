@@ -1,6 +1,5 @@
 import fire
 import numpy as np
-import pickle
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import roc_auc_score
 import torch.nn as nn
@@ -23,7 +22,9 @@ def save_model(model: CreditRNNModel,
     trans_table = str.maketrans({'-': '', ':': ''})
     date = date.translate(trans_table)
     file_name = f'{date}_{type}_model_checkpoint.pt'
-    with open(CHECKPOINTS_PATH / file_name, 'w') as handle:
+
+    model_path = CHECKPOINTS_PATH / file_name
+    with open(model_path, 'w') as handle:
         torch.save(model, CHECKPOINTS_PATH / file_name)
 
 
@@ -78,7 +79,7 @@ def train_model(model: CreditRNNModel,
                 'roc_auc': roc_auc,
                 'loss': epoch_loss
             }
-            save_model(best_checkpoint, 'best')
+            save_model(model, 'best')
         history = {
             'losses': loss_list,
             'roc-auc': roc_list
