@@ -1,4 +1,5 @@
 import fire
+import inspect
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import roc_auc_score
@@ -14,18 +15,32 @@ from data_preprocessing import PathsDict, Preprocesser
 import dataloader_utils
 from dataset import CreditDataset
 from model import CreditRNNModel
+from typing import Dict
 
 def save_model(model: CreditRNNModel,
-               type: str) -> None:
+               type: str,
+               metrics: Dict = None) -> None:
     raw_datetime = str(np.datetime64('now'))
     date, _ = raw_datetime.split('T')
     trans_table = str.maketrans({'-': '', ':': ''})
     date = date.translate(trans_table)
-    file_name = f'{date}_{type}_model_checkpoint.pt'
 
+    # Saving checkpoint
+    file_name = f'{date}_{type}_model_checkpoint.pt'
     model_path = CHECKPOINTS_PATH / file_name
     with open(model_path, 'w') as handle:
         torch.save(model, CHECKPOINTS_PATH / file_name)
+
+    # Saving metrics history
+    if metrics:
+        file_name = f'{date}_{type}_model_history.pt'
+        model_path = model_path = CHECKPOINTS_PATH / file_name
+        with open(model_path, 'w') as handle:
+            torch.save(metrics, CHECKPOINTS_PATH / file_name)
+        if type == 'last':
+            msg = (f"\nModel and history of training successfully "
+                   f"saved at: \n{CHECKPOINTS_PATH}")
+            print(msg)
 
 
 def train_model(model: CreditRNNModel,
@@ -34,25 +49,36 @@ def train_model(model: CreditRNNModel,
                 loss_criterion: Callable,
                 opt: Optimizer,
                 sched: LRScheduler = None,
-                num_epochs: int = N_EPOCHS):
+                num_epochs: int = 10):
     """Training loop of one instance `CreditRNNModel`
 
     Args:
-        model (credit_scoring.CreditRNNModel): Instance of one model
-        train_loader (torch.utils.data.DataLoader): Dataloader with train data
-        eval_loader (torch.utils.data.DataLoader): Dataloader with evaluation data
-        loss_criterion (Callable[[float, float], float]): Loss function
+        model (credit_scoring.CreditRNNModel): Instance of 
+            one model.
+        train_loader (torch.utils.data.DataLoader): Dataloader 
+            with train data.
+        eval_loader (torch.utils.data.DataLoader): Dataloader 
+            with evaluation data.
+        loss_criterion (Callable[[float, float], float]): 
+            Loss function
         opt (Optimizer): Optimizer of loss function
-        sched (LRScheduler, optional): LR Scheduler. Defaults to None.
-        num_epochs (int, optional): Number of epochs to train. Defaults to 10.
+        sched (LRScheduler, optional): LR Scheduler. 
+            Defaults to None.
+        num_epochs (int, optional): Number of epochs to train. 
+            Defaults to 10.
 
     Returns:
-        Tuple[Dict, Dict]: Checkpoint with best evaluation metrics and training history
+        Tuple[Dict, Dict]: Checkpoint with best evaluation 
+            metrics and training history.
     """
     max_roc = 0
     roc_list = []
     loss_list = []
     model = model.to(DEVICE)
+
+    msg = (f"Starting training of the model on "
+           f"{num_epochs} epochs.\n")
+    print(msg)
 
     for epoch in tqdm(range(num_epochs)):
         epoch_losses = []
@@ -84,8 +110,10 @@ def train_model(model: CreditRNNModel,
             'losses': loss_list,
             'roc-auc': roc_list
         }
-        print(f'Trained epoch {epoch} with loss {epoch_loss:.4f} and roc-auc {roc_auc:.4f}')
-
+        msg = (f"Trained epoch {epoch} with loss "
+               f"{epoch_loss:.4f} and roc-auc {roc_auc:.4f}")
+        print(msg)
+    save_model(model, 'last', history)
     return best_checkpoint, history
 
 def evaluate(model: CreditRNNModel,
@@ -104,13 +132,37 @@ def evaluate(model: CreditRNNModel,
     roc_auc = np.mean(np.array(roc_auc))
     return roc_auc
 
-def main(data_root: Path | str = DATA_ROOT,
-         train_folder: str = TRAIN_FILES_FOLDER,
-         train_target: str = TRAIN_TARGET_FILE,
-         test_folder: str = TEST_FILES_FOLDER,
-         n_epochs: int = N_EPOCHS,
-         agg_type: str = AGG_TYPE,
-         rnn_type: str = RNN_TYPE):
+def train_pipeline(data_root: Path | str = DATA_ROOT,
+                   train_folder: str = TRAIN_FILES_FOLDER,
+                   train_target: str = TRAIN_TARGET_FILE,
+                   test_folder: str = TEST_FILES_FOLDER,
+                   n_epochs: int = 10,
+                   agg_type: str = 'last',
+                   rnn_type: str = 'rnn'):
+    """Training pipeline
+
+    Args:
+        data_root (Path | str, optional): Path to root folder, 
+            where all the data is placed. Defaults to DATA_ROOT.
+        train_folder (str, optional): Name of the folder in 
+            `data_root_path`, with training data. Defaults to 
+            TRAIN_FILES_FOLDER.
+        train_target (str, optional): Name of the file in 
+            `data_root_path` folder, with train target values. 
+            Should have `.csv` extension. Defaults to TRAIN_TARGET_FILE.
+        test_folder (str, optional): Name of the folder in 
+            `data_root_path`, with test data. Defaults to 
+            TEST_FILES_FOLDER.
+        n_epochs (int, optional): Number of training epochs. 
+            Defaults to 10.
+        agg_type (str, optional): RNN aggergation type. Can be 
+            'max', 'mean' or 'last'. Defaults to 'last'.
+        rnn_type (str, optional): Type of RNN block. Can be 'rnn', 
+            'gru' or 'lstm'. Defaults to 'rnn'.
+    """
+    if type(data_root) is str:
+        data_root = Path(data_root)
+
     # Preprocessing
     paths_dict = PathsDict().make(
         data_root,
@@ -120,7 +172,7 @@ def main(data_root: Path | str = DATA_ROOT,
     )
     preproc = Preprocesser(paths_dict)
 
-    all_features = preproc.combine_train_test_features('train')
+    all_features = preproc.read_train_test_features('train')
     n_features = all_features[min(all_features.keys())].shape[1]
     tr_target = preproc.read_train_target()
 
@@ -156,7 +208,7 @@ def main(data_root: Path | str = DATA_ROOT,
     optimizer = Adam(model.parameters())
     scheduler = StepLR(optimizer, step_size=5, gamma=0.7)
     
-    best_checkpoint, history = train_model(
+    history = train_model(
         model, 
         train_loader, 
         val_loader,
@@ -165,6 +217,7 @@ def main(data_root: Path | str = DATA_ROOT,
         scheduler, 
         num_epochs=n_epochs
     )
+    del history
 
 if __name__ == "__main__":
-    fire.Fire(main)
+    fire.Fire(train_pipeline)

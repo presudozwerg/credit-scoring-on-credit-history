@@ -1,17 +1,17 @@
 import numpy as np
 import torch
 import torch.nn as nn
+
 from constants import *
 
 class CreditRNNModel(nn.Module):
     """RNN-based model for credit scoring"""
     def __init__(self,
                  seq_len: int,
-                 emb_dim: int = EMBED_DIM,
                  hidden_dim: int = HIDDEN_DIM,
                  n_layers: int = N_LAYERS,
-                 rnn_type: str = RNN_TYPE,
-                 aggregation_type: str = AGG_TYPE,
+                 rnn_type: str = 'rnn',
+                 aggregation_type: str = 'last',
                  is_bidir: bool = IS_BIDIR,
                  dropout_prob: float = DROPOUT_P):
         super().__init__()
@@ -47,7 +47,8 @@ class CreditRNNModel(nn.Module):
         """Forward pass of the `CreditRNNModel`
 
         Args:
-            input_batch (torch.Tensor): Input batch to pass through the model
+            input_batch (torch.Tensor): Input batch to pass
+                through the model.
 
         Raises:
             ValueError: Raises if type of RNN layer is incorrect
@@ -55,10 +56,7 @@ class CreditRNNModel(nn.Module):
         Returns:
             torch.Tensor: Output of the model (predicted probs)
         """
-        
         input_batch = input_batch.to(torch.float32)
-        
-        
         output, _ = self.rnn(input_batch) # [batch_size, n_seq, hidden_dim]
         
         if self.aggregation_type == 'max':
@@ -71,7 +69,6 @@ class CreditRNNModel(nn.Module):
             raise ValueError('Invalid aggregation_type')
         
         output = self.dropout(self.linear(self.non_lin(output))) # [batch_size, hidden_dim]
-        
         projection = self.projection(self.non_lin(output)) # [batch_size, 1]
         
         return torch.sigmoid(projection)
