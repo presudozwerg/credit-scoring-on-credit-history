@@ -1,0 +1,8 @@
+train: ../data/train_data
+test: ../data/test_data
+train_target: ../data/train_target.csv
+
+id_col: id
+tech_cols: ['rn']
+
+rn_threshold: 15

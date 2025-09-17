@@ -1,0 +1,13 @@
+callbacks:
+  lr_monitor:
+    logging_interval: step
+  rich_model_sum:
+    max_depth: 2
+
+
+experiment: credit-scoring-rnn
+save_dir: ../.
+ip: http://127.0.0.1:8080
+
+lr_interval: step
+model_summary_depth: 2

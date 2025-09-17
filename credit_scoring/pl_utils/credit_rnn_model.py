@@ -1,50 +1,33 @@
-import numpy as np
+from omegaconf import DictConfig
+
 import torch
 import torch.nn as nn
-
-from constants import DROPOUT_P, HIDDEN_DIM, IS_BIDIR, N_LAYERS
-
 
 class CreditRNNModel(nn.Module):
     """RNN-based model for credit scoring"""
 
-    def __init__(
-        self,
-        seq_len: int,
-        hidden_dim: int = HIDDEN_DIM,
-        n_layers: int = N_LAYERS,
-        rnn_type: str = "rnn",
-        aggregation_type: str = "last",
-        is_bidir: bool = IS_BIDIR,
-        dropout_prob: float = DROPOUT_P,
-    ):
+    def __init__(self, config: DictConfig):
         super().__init__()
-        rnn_input_size = seq_len
+        self.conf = config
 
-        model_params_dict = {
-            "input_size": rnn_input_size,
-            "hidden_size": hidden_dim,
-            "num_layers": n_layers,
-            "bidirectional": is_bidir,
-            "batch_first": True,
-        }
-
-        if rnn_type == "rnn":
-            self.rnn = nn.RNN(**model_params_dict)
-        elif rnn_type == "gru":
-            self.rnn = nn.GRU(**model_params_dict)
-        elif rnn_type == "lstm":
-            self.rnn = nn.LSTM(**model_params_dict)
+        if config.rnn_type == "rnn":
+            self.rnn = nn.RNN(**config.model_params)
+        elif config.rnn_type == "gru":
+            self.rnn = nn.GRU(**config.model_params)
+        elif config.rnn_type == "lstm":
+            self.rnn = nn.LSTM(**config.model_params)
         else:
             raise ValueError("Wrong type of RNN block!")
 
-        linear_dim = (is_bidir + 1) * hidden_dim
+        bidir_fact = config.model_params.bidirectional + 1
+        linear_dim = bidir_fact * config.model_params.hidden_size
+
         self.linear = nn.Linear(linear_dim, linear_dim)
-        self.projection = nn.Linear(linear_dim, 1)
-        self.aggregation_type = aggregation_type
+        self.projection = nn.Linear(linear_dim, config.n_classes)
+        self.aggregation_type = config.agg_type
 
         self.non_lin = nn.Tanh()
-        self.dropout = nn.Dropout(p=dropout_prob)
+        self.dropout = nn.Dropout(p=config.dropout_prob)
 
     def forward(self, input_batch: torch.Tensor) -> torch.Tensor:
         """Forward pass of the `CreditRNNModel`
@@ -77,9 +60,3 @@ class CreditRNNModel(nn.Module):
         projection = self.projection(self.non_lin(output))  # [batch_size, 1]
 
         return torch.sigmoid(projection)
-
-
-if __name__ == "__main__":
-    inp = torch.tensor(np.zeros((128, 10, 59))).to(torch.float32)
-    m = CreditRNNModel(59)
-    print(m(inp).shape)

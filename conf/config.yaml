@@ -1,0 +1,9 @@
+defaults:
+  - infer: infer
+  - logger: logger
+  - model: model
+  - preprocess: preprocess
+  - train: train
+  - _self_
+
+seed: 42

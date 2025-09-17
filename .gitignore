@@ -134,3 +134,10 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Raw data
+.csv
+.pq
+
+# Checkpoints
+*.ckpt

@@ -1,3 +1,4 @@
+from omegaconf import DictConfig
 from pathlib import Path
 from typing import Dict, List, Tuple
 
@@ -6,71 +7,35 @@ import pandas as pd
 import pyarrow.parquet as pq
 import tqdm
 
-from constants import (
-    DATA_ROOT,
-    ID_COLUMN_NAME,
-    ROWS_THRESHOLD,
-    TECH_COLS,
-    TEST_FILES_FOLDER,
-    TRAIN_FILES_FOLDER,
-    TRAIN_TARGET_FILE,
-)
 
-
-class PathsDict:
-    """Class constructing dict with all paths to data files"""
-
-    def __init__(self):
-        self.paths = {}
-
-    def make(
-        self,
-        data_root_path: Path = DATA_ROOT,
-        train_files_folder: str = TRAIN_FILES_FOLDER,
-        train_target_file: str = TRAIN_TARGET_FILE,
-        test_files_folder: str = TEST_FILES_FOLDER,
-    ) -> Dict:
-        """Creating paths dictionary
-
-        Args:
-            data_root_path (Path, optional): Path to root folder, where
-                all the data is placed. Defaults to DATA_ROOT.
-            train_files_folder (str, optional): Name of the folder in
-                `data_root_path`, with training data. Defaults to
-                TRAIN_FILES_FOLDER.
-            train_target_file (str, optional): Name of the file in
-                `data_root_path` folder, with train target values. Should
-                have `.csv` extension. Defaults to TRAIN_TARGET_FILE.
-            test_files_folder (str, optional): Name of the folder in
-                `data_root_path`, with test data. Defaults to
-                TEST_FILES_FOLDER.
-
-        Returns:
-            Dict: Dict with paths to different data types. It contains next
-                keys: 'train', 'test', 'train_target', and values are paths
-                to the corresponding data.
-        """
-        train_folder = data_root_path / train_files_folder
-        train_files_list = list(train_folder.glob("**/*.pq"))
-        self.paths["train"] = sorted(train_files_list)
-
-        test_folder = data_root_path / test_files_folder
-        test_files_list = list(test_folder.glob("**/*.pq"))
-        self.paths["test"] = sorted(test_files_list)
-
-        self.paths["train_target"] = Path(data_root_path / train_target_file)
-        return self.paths
+ID_COLUMN_NAME = "id"
 
 
 class Preprocesser:
     """Preprocessing data class"""
 
-    def __init__(self, paths_dict: dict):
-        self.paths_dict = paths_dict
-        self.feature_cols = None
+    def __init__(self, config: DictConfig):
+        self.config = config
+        self.train_files_dir = Path(config.train)
+        self.test_files_dir = Path(config.test)
+        self.train_target_path = Path(config.train_target)
+        self.rn_threshold = config.rn_threshold
+
+    def paths_dict(self) -> dict:
+        dct = {}
+
+        train_files_list = list(self.train_files_dir.glob("**/*.pq"))
+        test_files_list = list(self.test_files_dir.glob("**/*.pq"))
+
+        dct["train"] = sorted(train_files_list)
+        dct["test"] = sorted(test_files_list)
+        dct["train_target"] = self.train_target_path
+        return dct
 
     @staticmethod
-    def read_table(path: Path) -> Tuple[pd.DataFrame, str]:
+    def read_table(path: Path,
+                   tech_cols: list,
+                   id_col_name: str) -> Tuple[pd.DataFrame, str]:
         """Reading table with data placed at the given path.
 
         Args:
@@ -110,14 +75,17 @@ class Preprocesser:
         table = table.astype(types_dict)
 
         # remove all columns except feature columns
-        for c in TECH_COLS:
+        for c in tech_cols:
             cols.remove(c)
-        cols.remove(ID_COLUMN_NAME)
+        cols.remove(id_col_name)
         return table, cols
 
     @staticmethod
     def generate_df(
-        raw_table: pd.DataFrame, rn_threshold: int, feature_columns: List
+        raw_table: pd.DataFrame, 
+        rn_threshold: int, 
+        feature_columns: List,
+        id_column_name: str
     ) -> Dict:
         """Generates dict from table with data
 
@@ -131,7 +99,7 @@ class Preprocesser:
         """
         data_dict = {}
         table_width = len(feature_columns)
-        table = raw_table.groupby(ID_COLUMN_NAME)
+        table = raw_table.groupby(id_column_name)
 
         for i, frame in table:
             diff = max(rn_threshold - frame.shape[0], 0)
@@ -142,9 +110,7 @@ class Preprocesser:
             data_dict[i] = np.vstack((add_rows, source_rows)).astype("int16")
         return data_dict
 
-    def read_train_test_features(
-        self, label: str, rn_threshold: int = ROWS_THRESHOLD
-    ) -> Dict:
+    def read_train_test_features(self, label: str) -> dict:
         """Generating dict with all train or test data
 
         Args:
@@ -159,14 +125,25 @@ class Preprocesser:
             Dict: Final dict, which contains data according to
                 the given label.
         """
-        paths_list = self.paths_dict[label]
+        paths = self.paths_dict()
+        paths_list = paths[label]
         if label in ("train", "test"):
             data = {}
+            tech_cols = self.config.tech_cols
+            id_col = self.config.id_col
             print(f"Starting preprocessing pipeline for {label} data.\n")
             print("Processing the files...\n")
             for path in tqdm.tqdm(paths_list):
-                table, cols = self.read_table(path)
-                data.update(self.generate_df(table, rn_threshold, cols))
+                
+                table, cols = self.read_table(path, tech_cols, id_col)
+                data.update(
+                    self.generate_df(
+                        table, 
+                        self.rn_threshold, 
+                        cols,
+                        id_col
+                    )
+                )
         else:
             raise ValueError("Wrong label!")
         return data
@@ -181,7 +158,8 @@ class Preprocesser:
         Returns:
             pd.DataFrame: Contains target values
         """
-        df_path = self.paths_dict["train_target"]
+        paths = self.paths_dict()
+        df_path = paths["train_target"]
         if df_path.suffix != ".csv":
             raise ValueError("Path should belong to .csv file!")
 
@@ -192,18 +170,10 @@ class Preprocesser:
 
 
 def main():
-    print("Do you want to make paths dict? [y/n]")
-    ans = input()
-    if ans == "y":
-        paths_dict = PathsDict().make()
-        print(paths_dict)
-    else:
-        return 0
-
     print("Do you want to preprocess data? [y/n]")
     ans = input()
     if ans == "y":
-        preproc = Preprocesser(paths_dict)
+        preproc = Preprocesser()
 
         print("Type label of the data [train/test]")
         typ = input()
