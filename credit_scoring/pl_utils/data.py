@@ -1,6 +1,8 @@
 from omegaconf import DictConfig
 from typing import List
 
+from dvc_utils.dvc_load import download_dvc_data, only_dvc_in_dir
+import os
 import pl_utils.dataloader_utils as loader_utils
 import pytorch_lightning as pl
 import torch
@@ -9,10 +11,6 @@ from torch.utils.data import DataLoader
 
 from .preprocessing import Preprocesser
 from .typing_custom import DataType
-
-
-VAL_SIZE = 0.2
-
 
 class CreditDataset:
     """Dataset for `CreditRNNModel`"""
@@ -55,11 +53,18 @@ class CreditDataModule(pl.LightningDataModule):
         super().__init__()
         self.save_hyperparameters()
         self.config = config.train
+        self.load_conf = config.data_load
         self.preproc = Preprocesser(config.preprocess)
 
     def prepare_data(self):
-        # self.preproc.read_train_test_features('train')
-        # self.preproc.read_train_test_features('test')
+        if only_dvc_in_dir(self.load_conf.dvc_data):
+            print(f'Downloading data from {self.load_conf.gdrive_id}...\n')
+            os.system(
+                f"gdown {self.load_conf.gdrive_id} -O {self.load_conf.zip_path} --quiet"
+            )
+            os.system(f"unzip {self.load_conf.zip_path} -d {self.load_conf.raw_data}")
+            os.system(f"rm -rf {self.load_conf.zip_path}")
+            download_dvc_data(self.load_conf.dvc_data)
         pass
 
     def setup(self, stage: str):
