@@ -1,0 +1,11 @@
+data:
+  gdrive_id: 1NYvovOGzwycRRZ9ENYgPoK84ywSFeLd7
+  zip_path: ../data_raw/data_raw.zip
+  raw_data: ../data_raw
+  dvc_data: ../data
+
+checkpoint:
+  gdrive_id: 1DQc_xBAXgIbIjsBHAOmyRlE0Pys-kT4h
+  zip_path: ../model_checkpoints_raw/model_checkpoints_raw.zip
+  raw_data: ../model_checkpoints_raw
+  dvc_data: ../model_checkpoints

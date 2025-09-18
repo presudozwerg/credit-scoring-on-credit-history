@@ -1,0 +1,7 @@
+checkpoint_path: ../model_checkpoints/rnn-model-1/epoch=09-val_roc=0.7367.ckpt
+predict_devices: auto
+
+# Properties of prdeicted sample
+prediction_path: ../data/predict_probas.csv
+id_column_name: id
+prediction_column_name: prediction

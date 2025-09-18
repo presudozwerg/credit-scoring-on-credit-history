@@ -1,0 +1,30 @@
+checkpoints:
+  filename: "{epoch:02d}-{val_roc:.4f}"
+  monitor: val_roc
+  mode: max
+  save_top_k: 3
+  every_n_epochs: 2
+
+chkp_root: ../model_checkpoints
+
+
+device:
+  accelerator: cpu
+
+process:
+  val_check_interval: 1.0
+  num_sanity_val_steps: 4
+  gradient_clip_val: 2.0
+  log_every_n_steps: 100
+
+num_workers: 3
+
+# Data size parameters
+batch_size: 64
+val_size: 0.2
+max_epochs: 10
+
+# Optimizer and scheduler params
+lr: 0.001
+sched_step: 5
+sched_gamma: 0.7

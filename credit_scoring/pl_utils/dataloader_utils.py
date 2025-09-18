@@ -1,5 +1,6 @@
 import numpy as np
-from torch import tensor, stack, float32
+from torch import float32, stack, tensor
+
 
 def collate_fn_tr(input_batch):
     tensors = []
@@ -11,6 +12,7 @@ def collate_fn_tr(input_batch):
     flags = np.array(flags)
     flags = tensor(flags).to(float32)
     return tensors, flags
+
 
 def collate_fn_te(input_batch):
     tensors = []

@@ -1,0 +1,11 @@
+model_params:
+  input_size: 59
+  hidden_size: 32
+  num_layers: 1
+  bidirectional: False
+  batch_first: True
+
+rnn_type: rnn
+n_classes: 1
+agg_type: last
+dropout_prob: 0.1
