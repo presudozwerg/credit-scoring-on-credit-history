@@ -116,6 +116,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+mlops_project_uv/
 
 # Spyder project settings
 .spyderproject
@@ -136,8 +137,10 @@ dmypy.json
 .pyre/
 
 # Raw data
-.csv
-.pq
+*.csv
+*.pq
+data_raw/
+model_checkpoints_raw/
 
 # Checkpoints
 *.ckpt

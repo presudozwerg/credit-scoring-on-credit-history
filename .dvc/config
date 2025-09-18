@@ -1,0 +1,6 @@
+[core]
+    remote = data
+['remote "data"']
+    url = ../data_raw
+['remote "model"']
+    url = ../model_checkpoints_raw
