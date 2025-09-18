@@ -20,8 +20,8 @@ def training_pipeline(config: DictConfig):
         rnn_model, config.train.lr, config.train.sched_step, config.train.sched_gamma
     )
 
-    # if dvc_load.only_dvc_in_dir(config.data_load.checkpoint.dvc_data):
-    #     dvc_load.dvc_prepare_pipeline(**config.data_load.checkpoint)
+    if dvc_load.only_dvc_in_dir(config.data_load.checkpoint.dvc_data):
+        dvc_load.dvc_prepare_pipeline(**config.data_load.checkpoint)
 
     run_title = create_new_run(
         config.train.chkp_root, 
