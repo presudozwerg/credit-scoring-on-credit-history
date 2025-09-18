@@ -1,4 +1,3 @@
-from pl_utils.credit_rnn_model import CreditRNNModel
 from typing import Any
 
 import pytorch_lightning as pl
@@ -6,17 +5,17 @@ import torch
 from sklearn.metrics import roc_auc_score
 from torch.optim.lr_scheduler import StepLR
 
+from pl_utils.credit_rnn_model import CreditRNNModel
+
 
 class CreditModel(pl.LightningModule):
     """Module for training and evaluation
     models for the scoring task
     """
 
-    def __init__(self, 
-                 model: CreditRNNModel, 
-                 lr: float, 
-                 sched_step_size: int, 
-                 sched_gamma: float):
+    def __init__(
+        self, model: CreditRNNModel, lr: float, sched_step_size: int, sched_gamma: float
+    ):
         super().__init__()
         self.save_hyperparameters()
         self.model = model

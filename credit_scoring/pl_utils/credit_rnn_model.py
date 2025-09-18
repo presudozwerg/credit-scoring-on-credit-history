@@ -1,7 +1,7 @@
-from omegaconf import DictConfig
-
 import torch
 import torch.nn as nn
+from omegaconf import DictConfig
+
 
 class CreditRNNModel(nn.Module):
     """RNN-based model for credit scoring"""

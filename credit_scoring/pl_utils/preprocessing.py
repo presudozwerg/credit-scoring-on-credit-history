@@ -1,4 +1,3 @@
-from omegaconf import DictConfig
 from pathlib import Path
 from typing import Dict, List, Tuple
 
@@ -6,6 +5,7 @@ import numpy as np
 import pandas as pd
 import pyarrow.parquet as pq
 import tqdm
+from omegaconf import DictConfig
 
 
 ID_COLUMN_NAME = "id"
@@ -33,9 +33,9 @@ class Preprocesser:
         return dct
 
     @staticmethod
-    def read_table(path: Path,
-                   tech_cols: list,
-                   id_col_name: str) -> Tuple[pd.DataFrame, str]:
+    def read_table(
+        path: Path, tech_cols: list, id_col_name: str
+    ) -> Tuple[pd.DataFrame, str]:
         """Reading table with data placed at the given path.
 
         Args:
@@ -82,10 +82,10 @@ class Preprocesser:
 
     @staticmethod
     def generate_df(
-        raw_table: pd.DataFrame, 
-        rn_threshold: int, 
+        raw_table: pd.DataFrame,
+        rn_threshold: int,
         feature_columns: List,
-        id_column_name: str
+        id_column_name: str,
     ) -> Dict:
         """Generates dict from table with data
 
@@ -134,16 +134,8 @@ class Preprocesser:
             print(f"Starting preprocessing pipeline for {label} data.\n")
             print("Processing the files...\n")
             for path in tqdm.tqdm(paths_list):
-                
                 table, cols = self.read_table(path, tech_cols, id_col)
-                data.update(
-                    self.generate_df(
-                        table, 
-                        self.rn_threshold, 
-                        cols,
-                        id_col
-                    )
-                )
+                data.update(self.generate_df(table, self.rn_threshold, cols, id_col))
         else:
             raise ValueError("Wrong label!")
         return data

@@ -1,16 +1,18 @@
-from omegaconf import DictConfig
+import os
 from typing import List
 
-from dvc_utils.dvc_load import download_dvc_data, only_dvc_in_dir
-import os
-import pl_utils.dataloader_utils as loader_utils
 import pytorch_lightning as pl
 import torch
+from omegaconf import DictConfig
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
 
+import pl_utils.dataloader_utils as loader_utils
+from dvc_utils.dvc_load import download_dvc_data, only_dvc_in_dir
+
 from .preprocessing import Preprocesser
 from .typing_custom import DataType
+
 
 class CreditDataset:
     """Dataset for `CreditRNNModel`"""
@@ -58,7 +60,7 @@ class CreditDataModule(pl.LightningDataModule):
 
     def prepare_data(self):
         if only_dvc_in_dir(self.load_conf.dvc_data):
-            print(f'Downloading data from {self.load_conf.gdrive_id}...\n')
+            print(f"Downloading data from {self.load_conf.gdrive_id}...\n")
             os.system(
                 f"gdown {self.load_conf.gdrive_id} -O {self.load_conf.zip_path} --quiet"
             )
@@ -73,9 +75,9 @@ class CreditDataModule(pl.LightningDataModule):
             tr_target = self.preproc.read_train_target()
 
             tr_features, val_features, tr_target, val_target = train_test_split(
-                list(all_features.values()), 
-                tr_target["flag"].values, 
-                test_size=self.config.val_size
+                list(all_features.values()),
+                tr_target["flag"].values,
+                test_size=self.config.val_size,
             )
             del all_features
 
