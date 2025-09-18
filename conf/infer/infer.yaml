@@ -1,4 +1,4 @@
-checkpoint_path: ../model_checkpoints/rnn-model/epoch=03-val_roc=0.7108.ckpt
+checkpoint_path: ../model_checkpoints/rnn-model-1/epoch=09-val_roc=0.7367.ckpt
 predict_devices: auto
 
 # Properties of prdeicted sample

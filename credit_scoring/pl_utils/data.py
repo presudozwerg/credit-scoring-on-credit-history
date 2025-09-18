@@ -8,7 +8,7 @@ from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
 
 import pl_utils.dataloader_utils as loader_utils
-from dvc_utils.dvc_load import download_dvc_data, only_dvc_in_dir
+from dvc_utils.dvc_load import dvc_prepare_pipeline, only_dvc_in_dir
 
 from .preprocessing import Preprocesser
 from .typing_custom import DataType
@@ -55,18 +55,12 @@ class CreditDataModule(pl.LightningDataModule):
         super().__init__()
         self.save_hyperparameters()
         self.config = config.train
-        self.load_conf = config.data_load
+        self.load_conf = config.data_load.data
         self.preproc = Preprocesser(config.preprocess)
 
     def prepare_data(self):
         if only_dvc_in_dir(self.load_conf.dvc_data):
-            print(f"Downloading data from {self.load_conf.gdrive_id}...\n")
-            os.system(
-                f"gdown {self.load_conf.gdrive_id} -O {self.load_conf.zip_path} --quiet"
-            )
-            os.system(f"unzip {self.load_conf.zip_path} -d {self.load_conf.raw_data}")
-            os.system(f"rm -rf {self.load_conf.zip_path}")
-            download_dvc_data(self.load_conf.dvc_data)
+            dvc_prepare_pipeline(**self.load_conf)
         pass
 
     def setup(self, stage: str):

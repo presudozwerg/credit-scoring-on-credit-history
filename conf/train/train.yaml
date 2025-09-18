@@ -1,10 +1,12 @@
 checkpoints:
-  dirpath: ../model_checkpoints/rnn-model
   filename: "{epoch:02d}-{val_roc:.4f}"
   monitor: val_roc
   mode: max
-  save_top_k: 5
+  save_top_k: 3
   every_n_epochs: 2
+
+chkp_root: ../model_checkpoints
+
 
 device:
   accelerator: cpu

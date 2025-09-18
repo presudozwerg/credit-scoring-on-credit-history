@@ -1,0 +1,6 @@
+outs:
+- md5: 5c868a39814383ac08068069abbb0ba0.dir
+  size: 235566
+  nfiles: 3
+  hash: md5
+  path: rnn-model-0
